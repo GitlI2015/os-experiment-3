@@ -18,8 +18,8 @@ A semaphore is a variable or abstract data type used to control access to a
 common resource by multiple processes in a concurrent system. I implement a
 simple multi-writer single reader system, in which writer will fulfill a buffer
 with random numbers, and reader need to sum up all numbers in the buffer every
-10 milliseconds. writer threads and reader threads are created by pthread, and
-they will `join` after reader cycles 10 times.
+second. Since writer processes are forked from main process, shared memory is
+required to share either buffer or semaphores.
 
 usage:
 ```sh

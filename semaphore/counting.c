@@ -19,12 +19,12 @@ int main()
     int shmid3     = shmget(1236, sizeof(sem_t), IPC_CREAT | 0600);
     int shmid4     = shmget(1237, BUFFER_SIZE * sizeof(int), IPC_CREAT | 0600);
     int* j         = shmat(shmid, 0, 0);
-    sem_t* g_semt  = shmat(shmid2, 0, 0);
-    sem_t* g_semt2 = shmat(shmid3, 0, 0);
+    sem_t* bufferSem  = shmat(shmid2, 0, 0);
+    sem_t* counterSem = shmat(shmid3, 0, 0);
     int* buf       = shmat(shmid4, 0, 0);
     *j             = 0;
-    sem_init(g_semt, 1, 1);
-    sem_init(g_semt2, 1, 1);
+    sem_init(bufferSem, 1, 1);
+    sem_init(counterSem, 1, 1);
     memset(buf, 0, BUFFER_SIZE * sizeof(int));
 
     pid_t fpid1, fpid2;
@@ -33,8 +33,8 @@ int main()
     fpid2 = fork();
 
     j       = shmat(shmid, 0, 0);
-    g_semt  = shmat(shmid2, 0, 0);
-    g_semt2 = shmat(shmid3, 0, 0);
+    bufferSem  = shmat(shmid2, 0, 0);
+    counterSem = shmat(shmid3, 0, 0);
     buf     = shmat(shmid4, 0, 0);
 
     if (fpid1 < 0 || fpid2 < 0)
@@ -49,22 +49,22 @@ int main()
         else
             n = 2;
         while (1) {
-            sem_wait(g_semt2);
+            sem_wait(counterSem);
             if (*j == 10) {
-                sem_post(g_semt2);
+                sem_post(counterSem);
                 shmdt(j);
-                shmdt(g_semt);
-                shmdt(g_semt2);
+                shmdt(bufferSem);
+                shmdt(counterSem);
                 shmdt(buf);
                 return 0;
             }
             else
             {
-                sem_post(g_semt2);
-                sem_wait(g_semt);
+                sem_post(counterSem);
+                sem_wait(bufferSem);
                 for (int i = n * 64; i < n * 64 + 63; ++i)
                     buf[i] = rand() % 1000;
-                sem_post(g_semt);
+                sem_post(bufferSem);
             }
         }
     }
@@ -72,24 +72,24 @@ int main()
     {
         while (*j < 10) {
             int num = 0;
-            sem_wait(g_semt2);
-            sem_wait(g_semt);
+            sem_wait(counterSem);
+            sem_wait(bufferSem);
             for (int i = 0; i < BUFFER_SIZE; i++) {
                 num += buf[i];
             }
-            sem_post(g_semt);
+            sem_post(bufferSem);
             (*j)++;
-            sem_post(g_semt2);
+            sem_post(counterSem);
             usleep(1000000);
             printf("Buffer sum of round %d is : %d\n", *j, num);
         }
     }
 
-    sem_destroy(g_semt);
-    sem_destroy(g_semt2);
+    sem_destroy(bufferSem);
+    sem_destroy(counterSem);
     shmdt(j);
-    shmdt(g_semt);
-    shmdt(g_semt2);
+    shmdt(bufferSem);
+    shmdt(counterSem);
     shmdt(buf);
     shmctl(shmid, IPC_RMID, NULL);
     shmctl(shmid2, IPC_RMID, NULL);
