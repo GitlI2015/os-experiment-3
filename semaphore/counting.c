@@ -1,77 +1,100 @@
 // created by gloit
 // 17.04.12
+#include <pthread.h>
+#include <semaphore.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <pthread.h>
-#include <unistd.h>
-#include <semaphore.h>
-#include <time.h>
 #include <sys/ipc.h>
+#include <sys/shm.h>
 #include <sys/types.h>
-
-sem_t g_semt;
-FILE* fp;
-int buf[192];
-int *buf_p;
-int j;
-
-void* reader_thread(void* args)
-{
-    long long a = 0;
-
-    for(j = 0;j < 10;++j)
-    {
-        sem_wait(&g_semt);
-        for(int  i = 0;i < 192;++i)
-            a += buf[i];
-        printf("Current sum is: %lld\n", a);
-        sem_post(&g_semt);
-        a = 0;
-        usleep(100000);
-    }
-    return 0;
-}
-
-void* writer_thread(void* args)
-{
-    int s = *(int *)args;
-    while(j != 10)
-    {
-        sem_wait(&g_semt);
-        for(int i = 64*(s-1);i < 64*s-1;++i)
-            buf[i] = rand() % 1000;
-        sem_post(&g_semt);
-    }
-}
+#include <time.h>
+#include <unistd.h>
+#define BUFFER_SIZE 192
 
 int main()
 {
-    const size_t nThreadCount = 4; //amounts of thread array
-    const unsigned int nSemaphoreCount = 1; //initial value of semaphore
-    int nRet = -1;
-    void* pRet = NULL;
-    memset(buf,0,sizeof(buf));
-    pthread_t threadIDs[nThreadCount];
-    fp = fopen("test","w+");
-    
-    nRet = sem_init(&g_semt, 0, nSemaphoreCount);
-    if (0 != nRet)
-        return -1;
+    int shmid      = shmget(1234, 4, IPC_CREAT | 0600);
+    int shmid2     = shmget(1235, sizeof(sem_t), IPC_CREAT | 0600);
+    int shmid3     = shmget(1236, sizeof(sem_t), IPC_CREAT | 0600);
+    int shmid4     = shmget(1237, BUFFER_SIZE * sizeof(int), IPC_CREAT | 0600);
+    int* j         = shmat(shmid, 0, 0);
+    sem_t* g_semt  = shmat(shmid2, 0, 0);
+    sem_t* g_semt2 = shmat(shmid3, 0, 0);
+    int* buf       = shmat(shmid4, 0, 0);
+    *j             = 0;
+    sem_init(g_semt, 1, 1);
+    sem_init(g_semt2, 1, 1);
+    memset(buf, 0, BUFFER_SIZE * sizeof(int));
 
-    nRet = pthread_create(&threadIDs[0], NULL, reader_thread, NULL); 
-    for (size_t i = 1; i < nThreadCount; ++ i)
+    pid_t fpid1, fpid2;
+
+    fpid1 = fork();
+    fpid2 = fork();
+
+    j       = shmat(shmid, 0, 0);
+    g_semt  = shmat(shmid2, 0, 0);
+    g_semt2 = shmat(shmid3, 0, 0);
+    buf     = shmat(shmid4, 0, 0);
+
+    if (fpid1 < 0 || fpid2 < 0)
+        fprintf(stderr, "error: unable to fork!");
+    else if (fpid1 == 0 || fpid2 == 0)
     {
-        nRet = pthread_create(&threadIDs[i], NULL, writer_thread, &i);
-        if (0 != nRet)
-            continue;
+        int n;
+        if (fpid1)
+            n = 0;
+        else if (fpid2)
+            n = 1;
+        else
+            n = 2;
+        while (1) {
+            sem_wait(g_semt2);
+            if (*j == 10) {
+                sem_post(g_semt2);
+                shmdt(j);
+                shmdt(g_semt);
+                shmdt(g_semt2);
+                shmdt(buf);
+                return 0;
+            }
+            else
+            {
+                sem_post(g_semt2);
+                sem_wait(g_semt);
+                for (int i = n * 64; i < n * 64 + 63; ++i)
+                    buf[i] = rand() % 1000;
+                sem_post(g_semt);
+            }
+        }
+    }
+    else
+    {
+        while (*j < 10) {
+            int num = 0;
+            sem_wait(g_semt2);
+            sem_wait(g_semt);
+            for (int i = 0; i < BUFFER_SIZE; i++) {
+                num += buf[i];
+            }
+            sem_post(g_semt);
+            (*j)++;
+            sem_post(g_semt2);
+            usleep(1000000);
+            printf("Buffer sum of round %d is : %d\n", *j, num);
+        }
     }
 
-    for (size_t i = 0; i < nThreadCount; ++ i)
-        pthread_join(threadIDs[i], &pRet);
-
-    sem_destroy(&g_semt);
+    sem_destroy(g_semt);
+    sem_destroy(g_semt2);
+    shmdt(j);
+    shmdt(g_semt);
+    shmdt(g_semt2);
+    shmdt(buf);
+    shmctl(shmid, IPC_RMID, NULL);
+    shmctl(shmid2, IPC_RMID, NULL);
+    shmctl(shmid3, IPC_RMID, NULL);
+    shmctl(shmid4, IPC_RMID, NULL);
 
     return 0;
 }
-
