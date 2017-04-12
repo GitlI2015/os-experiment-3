@@ -19,7 +19,7 @@ common resource by multiple processes in a concurrent system. I implement a
 simple multi-writer single reader system, in which writer will fulfill a buffer
 with random numbers, and reader need to sum up all numbers in the buffer every
 10 milliseconds. writer threads and reader threads are created by pthread, and
-they will *join* after reader cycles 10 times.
+they will `join` after reader cycles 10 times.
 
 usage:
 ```sh
