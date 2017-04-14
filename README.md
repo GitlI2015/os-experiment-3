@@ -1,16 +1,28 @@
 #  os-experiment-3
 
 In this experiment, I write three IPC demos. They are **Semaphores**
-**Sockets**, and **FIFOs** respectively.  I will describe what do these demos
+**Sockets**, and **SharedMemory** respectively.  I will describe what do these demos
 do and how they work.
 
 Main directory has the following structure, and each demo is in its
 corresponding directory (together with Makefile)
 
     .
-    ├── FIFO
+    ├── SharedMemory
     ├── semaphore
     └── Socket
+
+
+## SharedMemory
+
+Shared memory can be created to share data between processes. In this demo, I
+write a matrix multiplication program that can multiply two matrix in parallel.
+Each process will be assigned with certain lines of multiplication tasks.
+
+usage:
+```sh
+$ make & cat testcase | ./matrix_mul
+```
 
 ## Semaphores 
 

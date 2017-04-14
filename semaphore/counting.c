@@ -14,15 +14,17 @@
 
 int main()
 {
-    int shmid      = shmget(1234, 4, IPC_CREAT | 0600);
-    int shmid2     = shmget(1235, sizeof(sem_t), IPC_CREAT | 0600);
-    int shmid3     = shmget(1236, sizeof(sem_t), IPC_CREAT | 0600);
-    int shmid4     = shmget(1237, BUFFER_SIZE * sizeof(int), IPC_CREAT | 0600);
-    int* j         = shmat(shmid, 0, 0);
+    int shmid  = shmget(1234, 4, IPC_CREAT | 0600);
+    int shmid2 = shmget(1235, sizeof(sem_t), IPC_CREAT | 0600);
+    int shmid3 = shmget(1236, sizeof(sem_t), IPC_CREAT | 0600);
+    int shmid4 = shmget(1237, BUFFER_SIZE * sizeof(int), IPC_CREAT | 0600);
+    int* j     = shmat(shmid, 0, 0);
+
     sem_t* bufferSem  = shmat(shmid2, 0, 0);
     sem_t* counterSem = shmat(shmid3, 0, 0);
-    int* buf       = shmat(shmid4, 0, 0);
-    *j             = 0;
+
+    int* buf = shmat(shmid4, 0, 0);
+    *j       = 0;
     sem_init(bufferSem, 1, 1);
     sem_init(counterSem, 1, 1);
     memset(buf, 0, BUFFER_SIZE * sizeof(int));
@@ -32,10 +34,10 @@ int main()
     fpid1 = fork();
     fpid2 = fork();
 
-    j       = shmat(shmid, 0, 0);
+    j          = shmat(shmid, 0, 0);
     bufferSem  = shmat(shmid2, 0, 0);
     counterSem = shmat(shmid3, 0, 0);
-    buf     = shmat(shmid4, 0, 0);
+    buf        = shmat(shmid4, 0, 0);
 
     if (fpid1 < 0 || fpid2 < 0)
         fprintf(stderr, "error: unable to fork!");
