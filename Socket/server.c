@@ -80,6 +80,7 @@ int main()
                         }
                 }
         }
+        usleep(100000);
     }
     pthread_join(p_id, nothing);
     for (int i = 0; i < conNum; ++i) close(confds[i]);
